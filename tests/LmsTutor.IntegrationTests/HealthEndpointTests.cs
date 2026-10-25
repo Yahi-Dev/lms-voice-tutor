@@ -1,14 +1,14 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
+using LmsTutor.IntegrationTests.Infrastructure;
 
 namespace LmsTutor.IntegrationTests;
 
-public class HealthEndpointTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class HealthEndpointTests(TutorApiFactory factory) : IClassFixture<TutorApiFactory>
 {
     [Fact]
-    public async Task Health_WhenAppIsRunning_ReturnsOk()
+    public async Task Health_WhenDatabaseIsReachable_ReturnsOk()
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateApiClient();
 
         var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
 
