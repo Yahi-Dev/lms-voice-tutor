@@ -5,6 +5,7 @@ using LmsTutor.Server.Modules.Tutoring;
 using LmsTutor.Server.Shared.Http;
 using LmsTutor.Server.Shared.Persistence;
 using LmsTutor.Server.Shared.RateLimiting;
+using LmsTutor.Server.Shared.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,7 @@ builder.Services.AddValidation();
 builder.Services.AddApiErrorHandling();
 builder.Services.AddApiRateLimiting();
 builder.Services.AddPersistence();
+builder.Services.AddPersistentKeyRing(builder.Configuration);
 builder.Services.AddIdentityModule();
 builder.Services.AddTutoringModule();
 builder.Services.AddSpeechModule();
@@ -29,6 +31,14 @@ await app.InitializeDatabaseAsync();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
+app.UseSpaStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -49,6 +59,6 @@ api.Map("/{**path}", () => TypedResults.NotFound());
 
 app.MapHealthChecks("/health").AllowAnonymous();
 
-app.MapFallbackToFile("index.html").AllowAnonymous();
+app.MapSpaFallback();
 
 app.Run();
