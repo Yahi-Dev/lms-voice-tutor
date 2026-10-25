@@ -1,0 +1,20 @@
+services:
+  app:
+    build: .
+    image: lms-voice-tutor:local
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      # SQLite database (with the conversation history) and the session key ring survive restarts.
+      - app-data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+volumes:
+  app-data:
