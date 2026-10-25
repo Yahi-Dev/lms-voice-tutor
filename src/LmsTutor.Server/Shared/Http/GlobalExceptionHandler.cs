@@ -15,14 +15,15 @@ internal sealed partial class GlobalExceptionHandler(
         // Since .NET 10 the middleware no longer logs exceptions that a handler reports as handled.
         LogUnhandledException(logger, exception, httpContext.Request.Path);
 
-        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        // Malformed requests (for example invalid JSON) keep their 4xx status: the client must fix them.
+        var (status, title, code) = exception is BadHttpRequestException badRequest
+            ? (badRequest.StatusCode, "La solicitud no es válida.", "invalid_request")
+            : (StatusCodes.Status500InternalServerError, "Ocurrió un error inesperado.", "unexpected_error");
 
-        var problem = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Ocurrió un error inesperado.",
-        };
-        problem.Extensions["code"] = "unexpected_error";
+        httpContext.Response.StatusCode = status;
+
+        var problem = new ProblemDetails { Status = status, Title = title };
+        problem.Extensions["code"] = code;
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {

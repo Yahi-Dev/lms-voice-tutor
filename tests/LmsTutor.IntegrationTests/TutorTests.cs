@@ -5,6 +5,7 @@ using LmsTutor.Server.Modules.Tutoring;
 using LmsTutor.Server.Shared.ExternalServices;
 using LmsTutor.Server.Shared.Http;
 using LmsTutor.Server.Shared.Persistence.Seed;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -119,6 +120,25 @@ public sealed class TutorTests(TutorApiFactory factory) : IClassFixture<TutorApi
         var response = await client.AskAsync(lessonId, question);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Ask_WithMalformedBody_Returns400InsteadOfAServerError()
+    {
+        // In Development minimal APIs throw on bad requests; the error handler must still answer 400.
+        // Providers stay on the demo model because the test configuration overrides them.
+        var app = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+        var lessonId = await factory.GetLessonIdAsync("metodos-http");
+        var client = ApiClient.Create(app);
+        await client.LoginAsync(DemoData.Ana);
+        // "question" holds a byte that is not valid UTF-8, like text sent in a legacy code page.
+        using var body = new ByteArrayContent([.. "{\"question\":\""u8, 0xBF, .. "\"}"u8]);
+        body.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+
+        var response = await client.PostAsync($"/api/lessons/{lessonId}/messages", body, _ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("invalid_request", await response.ReadProblemCodeAsync());
     }
 
     [Fact]
