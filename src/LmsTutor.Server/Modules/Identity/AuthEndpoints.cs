@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using LmsTutor.Server.Shared.Http;
+using LmsTutor.Server.Shared.RateLimiting;
 using LmsTutor.Server.Shared.Security;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
@@ -22,7 +23,7 @@ public static class AuthEndpoints
     {
         var auth = api.MapGroup("/auth").WithTags("Auth");
 
-        auth.MapPost("/login", LoginAsync).AllowAnonymous();
+        auth.MapPost("/login", LoginAsync).AllowAnonymous().RequireRateLimiting(RateLimitPolicies.Login);
         auth.MapPost("/logout", LogoutAsync);
         auth.MapGet("/me", GetCurrentUserAsync);
 
