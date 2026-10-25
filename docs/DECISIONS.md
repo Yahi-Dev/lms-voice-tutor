@@ -64,7 +64,14 @@ Registro breve de las decisiones de diseño de la prueba de concepto: contexto, 
 
 **Alternativas.** Groq no ofrece síntesis de voz en español. Un servidor TTS propio (Piper o Kokoro) agregaría otro contenedor, y la Web Speech API para reconocer voz solo funciona bien en Chrome y envía el audio a terceros.
 
-**Consecuencias.** Se descartan las transcripciones vacías, las de clips silenciosos y las frases que Whisper suele inventar ante el silencio. La calidad de la voz depende del navegador y del sistema operativo. Si no hay voz en español, el botón *Escuchar* se desactiva y lo explica.
+**Consecuencias.** Se descartan las transcripciones vacías, las de clips silenciosos y las frases que Whisper suele inventar ante el silencio.
+
+Para que la lectura suene humana:
+- La aplicación ordena las voces por naturalidad. Primero las neuronales, como las *Online (Natural)* de Edge o las mejoradas de Apple; después las de red, como las de Google; y al final las voces locales clásicas, que suenan robóticas. El alumno puede elegir otra voz en *Voz de lectura*, y la elección se recuerda.
+- Antes de leer, el texto se adapta al español hablado: las siglas que se pronuncian como palabra se leen así (*API*, *REST*), las demás se deletrean con el nombre de las letras en español (*HTTP*: "hache te te pe"; *JSON*: "yéison"), las rutas se leen ("barra productos barra 42"), las abreviaturas se expanden y los dos puntos se convierten en pausas.
+- La lectura va un poco más lenta que la predeterminada.
+
+La calidad final depende de las voces del navegador. Si no hay voz en español, el botón *Escuchar* se desactiva y lo explica.
 
 ## 9. Errores y resiliencia pensados para la interfaz
 
@@ -89,7 +96,7 @@ GitHub Actions ejecuta todo en cada PR, además de construir y probar la imagen 
 - **Cuota del plan gratuito.** Groq permite unos 8.000 tokens por minuto por modelo para toda la cuenta, unas 2 o 3 preguntas por minuto. Para uso real hace falta un plan de pago o cuotas por institución.
 - **Una sola instancia.** SQLite, el limitador de peticiones en memoria y el anillo de llaves en disco asumen un único servidor. Para escalar horizontalmente: PostgreSQL, llaves de Data Protection compartidas (base de datos o Redis) y un limitador distribuido.
 - **Sin streaming.** La salida estructurada del proveedor no admite streaming, así que la respuesta llega completa tras un estado *El tutor está pensando*. Con SSE haría falta señalar el estado de otra forma.
-- **Voz.** La lectura en voz alta depende del navegador. Una voz neural en el servidor mejoraría la consistencia. Las grabaciones se limitan a 60 segundos.
+- **Voz.** La lectura en voz alta depende de las voces del navegador: Edge da voces neuronales muy naturales, y otros navegadores pueden tener solo voces básicas. Una síntesis neuronal en el servidor (por ejemplo Kokoro o Piper en un contenedor propio) daría la misma voz en todos los navegadores, a costa de otro servicio. Las grabaciones se limitan a 60 segundos.
 - **Inyección de prompts.** Está mitigada: el texto del alumno va delimitado, el modelo no tiene herramientas, la salida tiene un esquema fijo y se muestra como texto. Pero no se puede eliminar por completo. El impacto queda acotado a respuestas de menor calidad dentro de la propia sesión del alumno. Un modelo guardián sería el siguiente paso.
 - **Fuera de alcance.** Registro de usuarios, recuperación de contraseña, roles de docente o administrador y gestión de contenido. Los saludos se responden con una invitación a preguntar sobre la lección.
 - **Contraseñas.** PBKDF2-HMAC-SHA512 con las 100.000 iteraciones por defecto de Identity. OWASP recomienda 220.000 y basta una línea de configuración para subirlo.
