@@ -1,8 +1,21 @@
+import { Navigate, Route, Routes } from 'react-router'
+import { AppLayout } from '@/app/AppLayout'
+import { LoginPage } from '@/features/auth/LoginPage'
+import { RequireAuth } from '@/features/auth/RequireAuth'
+import { CoursesPage } from '@/features/courses/CoursesPage'
+import { LessonPage } from '@/features/courses/LessonPage'
+
 export default function App() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-2 px-6">
-      <h1 className="text-2xl font-semibold">Tutor virtual</h1>
-      <p className="text-slate-600">Aprende con tus lecciones y pregunta por texto o por voz.</p>
-    </main>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<RequireAuth />}>
+        <Route element={<AppLayout />}>
+          <Route index element={<CoursesPage />} />
+          <Route path="lessons/:lessonId" element={<LessonPage />} />
+        </Route>
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
