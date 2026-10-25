@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <RootNamespace>LmsTutor.Server</RootNamespace>
+    <UserSecretsId>0b550d6c-3777-4048-812f-4fa998c761d5</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
