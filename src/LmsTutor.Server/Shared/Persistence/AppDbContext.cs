@@ -1,5 +1,6 @@
 using LmsTutor.Server.Modules.Catalog;
 using LmsTutor.Server.Modules.Identity;
+using LmsTutor.Server.Modules.Tutoring;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<LessonSection> LessonSections => Set<LessonSection>();
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
+    public DbSet<TutorExchange> TutorExchanges => Set<TutorExchange>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
