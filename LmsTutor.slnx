@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LmsTutor.Server/LmsTutor.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LmsTutor.IntegrationTests/LmsTutor.IntegrationTests.csproj" />
+  </Folder>
+</Solution>
