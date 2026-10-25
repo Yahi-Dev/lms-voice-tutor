@@ -1,5 +1,5 @@
 import { MicrophoneError, pickAudioMimeType, toMicrophoneError } from './recording'
-import { pickSpanishVoice, splitIntoSpeechChunks } from './speech'
+import { pickSpanishVoice, rankSpanishVoices, splitIntoSpeechChunks, voiceQuality } from './speech'
 
 describe('pickAudioMimeType', () => {
   it('prefers WebM with Opus and falls back to MP4 for older Safari', () => {
@@ -43,17 +43,33 @@ describe('splitIntoSpeechChunks', () => {
   })
 })
 
-describe('pickSpanishVoice', () => {
-  const voice = (lang: string, localService = true) =>
-    ({ lang, localService, name: lang }) as SpeechSynthesisVoice
+describe('rankSpanishVoices', () => {
+  const voice = (name: string, lang: string, localService = true) =>
+    ({ name, lang, localService, voiceURI: name }) as SpeechSynthesisVoice
 
-  it('prefers Latin American Spanish and local voices', () => {
-    expect(
-      pickSpanishVoice([voice('en-US'), voice('es-ES'), voice('es-CO', false), voice('es-CO')]),
-    ).toEqual(voice('es-CO'))
+  const helena = voice('Microsoft Helena - Spanish (Spain)', 'es-ES')
+  const salome = voice('Microsoft Salome Online (Natural) - Spanish (Colombia)', 'es-CO', false)
+  const dalia = voice('Microsoft Dalia Online (Natural) - Spanish (Mexico)', 'es-MX', false)
+  const google = voice('Google español', 'es-ES', false)
+  const english = voice('Microsoft Zira', 'en-US')
+
+  it('puts natural voices first, then network voices, then robotic local ones', () => {
+    expect(rankSpanishVoices([helena, google, dalia, english, salome])).toEqual([
+      salome,
+      dalia,
+      google,
+      helena,
+    ])
   })
 
-  it('returns nothing when there is no Spanish voice', () => {
-    expect(pickSpanishVoice([voice('en-US')])).toBeUndefined()
+  it('classifies voice quality from the voice name', () => {
+    expect(voiceQuality(salome)).toBe('natural')
+    expect(voiceQuality(google)).toBe('good')
+    expect(voiceQuality(helena)).toBe('basic')
+  })
+
+  it('picks the best Spanish voice or nothing', () => {
+    expect(pickSpanishVoice([helena, salome])).toBe(salome)
+    expect(pickSpanishVoice([english])).toBeUndefined()
   })
 })

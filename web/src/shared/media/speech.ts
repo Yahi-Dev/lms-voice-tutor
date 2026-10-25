@@ -35,15 +35,40 @@ export function splitIntoSpeechChunks(text: string, maxLength = MAX_CHUNK_LENGTH
 
 const PREFERRED_LANGUAGES = ['es-co', 'es-419', 'es-mx', 'es-us', 'es-es']
 
-/** Prefers a Latin American Spanish voice, then any Spanish voice; local voices before network ones. */
-export function pickSpanishVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
-  const spanish = voices.filter((voice) => voice.lang.toLowerCase().startsWith('es'))
-  if (spanish.length === 0) return undefined
+/**
+ * Neural voices sound close to a person: Edge's "Online (Natural)" voices, Apple's enhanced and premium
+ * voices. Google's network voices come next; the classic local system voices sound robotic.
+ */
+const NATURAL_VOICE = /natural|neural|premium|enhanced|mejorad/i
+const GOOGLE_VOICE = /google/i
 
-  const rank = (voice: SpeechSynthesisVoice) => {
+export type VoiceQuality = 'natural' | 'good' | 'basic'
+
+export function voiceQuality(voice: SpeechSynthesisVoice): VoiceQuality {
+  if (NATURAL_VOICE.test(voice.name)) return 'natural'
+  if (GOOGLE_VOICE.test(voice.name) || !voice.localService) return 'good'
+  return 'basic'
+}
+
+const QUALITY_RANK: Record<VoiceQuality, number> = { natural: 0, good: 1, basic: 2 }
+
+/** Spanish voices ordered from most to least natural, Latin American accents first within each tier. */
+export function rankSpanishVoices(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice[] {
+  const languageRank = (voice: SpeechSynthesisVoice) => {
     const index = PREFERRED_LANGUAGES.indexOf(voice.lang.toLowerCase().replace('_', '-'))
-    return (index === -1 ? PREFERRED_LANGUAGES.length : index) * 2 + (voice.localService ? 0 : 1)
+    return index === -1 ? PREFERRED_LANGUAGES.length : index
   }
 
-  return [...spanish].sort((a, b) => rank(a) - rank(b))[0]
+  return voices
+    .filter((voice) => voice.lang.toLowerCase().startsWith('es'))
+    .sort(
+      (a, b) =>
+        QUALITY_RANK[voiceQuality(a)] - QUALITY_RANK[voiceQuality(b)] ||
+        languageRank(a) - languageRank(b) ||
+        a.name.localeCompare(b.name),
+    )
+}
+
+export function pickSpanishVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  return rankSpanishVoices(voices)[0]
 }

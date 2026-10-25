@@ -148,7 +148,8 @@ Las decisiones, alternativas y límites están en **[docs/DECISIONS.md](docs/DEC
 ## Solución de problemas
 
 - **El micrófono no funciona:** usa `http://localhost`, no una IP de red; revisa el permiso en el icono junto a la dirección del sitio.
-- **"Escuchar" está desactivado:** el navegador no tiene una voz en español. Edge y Chrome en Windows suelen incluirla; en Linux puede faltar.
+- **La voz suena robótica:** abre la aplicación en **Microsoft Edge**, que trae voces neuronales en español (por ejemplo *Salome* o *Gonzalo* de Colombia, *Dalia* o *Jorge* de México). La aplicación elige la más natural disponible y puedes cambiarla en *Voz de lectura*. Chrome ofrece las voces *Google español*.
+- **"Escuchar" está desactivado:** el navegador no tiene ninguna voz en español. En Linux puede faltar.
 - **`429` del tutor con Groq:** el plan gratuito permite unas pocas preguntas por minuto para toda la cuenta. Espera los segundos indicados o usa el modo demo.
 - **Puerto ocupado:** cambia `APP_PORT` en `.env`.
 - **Empezar de cero:** `docker compose down -v` borra la base de datos y las sesiones.
