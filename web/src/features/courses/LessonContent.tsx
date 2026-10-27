@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import type { Lesson } from '@/shared/api/types'
 import { cn } from '@/shared/lib/utils'
 import { sectionElementId } from './sections'
@@ -11,7 +12,9 @@ export function LessonContent({ lesson, highlightedSectionKey }: LessonContentPr
   return (
     <article className="space-y-6">
       <header className="space-y-1">
-        <p className="text-sm text-muted-foreground">{lesson.courseTitle}</p>
+        <Link to="/" className="text-sm text-muted-foreground hover:underline">
+          ← {lesson.courseTitle}
+        </Link>
         <h1 className="text-2xl font-semibold">{lesson.title}</h1>
         <p className="text-muted-foreground">{lesson.summary}</p>
       </header>

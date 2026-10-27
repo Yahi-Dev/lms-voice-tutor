@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
+import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { coursesQueryKey, fetchCourses } from './api'
@@ -19,8 +20,11 @@ export function CoursesPage() {
 
       {courses.isError && (
         <Alert variant="destructive">
-          <AlertDescription>
-            No se pudieron cargar tus cursos. Revisa tu conexión y recarga la página.
+          <AlertDescription className="space-y-2">
+            <p>No se pudieron cargar tus cursos. Revisa tu conexión.</p>
+            <Button size="sm" variant="outline" onClick={() => void courses.refetch()}>
+              Reintentar
+            </Button>
           </AlertDescription>
         </Alert>
       )}

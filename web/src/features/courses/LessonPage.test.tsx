@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderWithProviders } from '@/test/render'
 import { apiUrl, lesson, problem, server } from '@/test/server'
@@ -18,6 +19,24 @@ describe('LessonPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'POST: crear recursos' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Pregúntale al tutor' })).toBeInTheDocument()
+  })
+
+  it('offers a retry when the lesson cannot be loaded because of the connection', async () => {
+    let attempts = 0
+    server.use(
+      http.get(apiUrl('/lessons/:lessonId'), () => {
+        attempts += 1
+        return attempts === 1 ? HttpResponse.error() : HttpResponse.json(lesson)
+      }),
+    )
+    const user = userEvent.setup()
+    renderLesson()
+
+    await user.click(await screen.findByRole('button', { name: 'Reintentar' }))
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Métodos HTTP' }),
+    ).toBeInTheDocument()
   })
 
   it('tells a student without access that the lesson is not available to them', async () => {
