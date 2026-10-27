@@ -16,9 +16,17 @@ interface MessageListProps {
     stop: () => void
   }
   onShowSection: (key: string) => void
+  /** A topic of the current lesson to suggest when the conversation is empty. */
+  suggestedTopic?: string
 }
 
-export function MessageList({ exchanges, pending, speech, onShowSection }: MessageListProps) {
+export function MessageList({
+  exchanges,
+  pending,
+  speech,
+  onShowSection,
+  suggestedTopic,
+}: MessageListProps) {
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -29,37 +37,41 @@ export function MessageList({ exchanges, pending, speech, onShowSection }: Messa
   if (exchanges.length === 0 && !pending) {
     return (
       <p className="px-1 py-6 text-center text-sm text-muted-foreground">
-        Aún no hay preguntas en esta lección. Prueba, por ejemplo, con «¿Para qué sirve POST?».
+        Aún no hay preguntas en esta lección.
+        {suggestedTopic &&
+          ` Pregunta sobre cualquiera de sus temas, por ejemplo «${suggestedTopic}».`}
       </p>
     )
   }
 
   return (
-    <ol className="space-y-4" aria-label="Conversación con el tutor">
-      {exchanges.map((exchange) => (
-        <li key={exchange.id} className="space-y-2">
-          <QuestionBubble text={exchange.question} viaVoice={exchange.inputMode === 'voice'} />
-          <AnswerBubble exchange={exchange} speech={speech} onShowSection={onShowSection} />
-        </li>
-      ))}
-      {pending && (
-        <li className="space-y-1">
-          <QuestionBubble
-            text={pending.question.text}
-            viaVoice={pending.question.inputMode === 'voice'}
-          />
-          <p
-            className={cn(
-              'text-right text-xs',
-              pending.failed ? 'text-destructive' : 'text-muted-foreground',
-            )}
-          >
-            {pending.failed ? 'No enviada' : 'Enviando…'}
-          </p>
-        </li>
-      )}
+    <>
+      <ol className="space-y-4" aria-label="Conversación con el tutor">
+        {exchanges.map((exchange) => (
+          <li key={exchange.id} className="space-y-2">
+            <QuestionBubble text={exchange.question} viaVoice={exchange.inputMode === 'voice'} />
+            <AnswerBubble exchange={exchange} speech={speech} onShowSection={onShowSection} />
+          </li>
+        ))}
+        {pending && (
+          <li className="space-y-1">
+            <QuestionBubble
+              text={pending.question.text}
+              viaVoice={pending.question.inputMode === 'voice'}
+            />
+            <p
+              className={cn(
+                'text-right text-xs',
+                pending.failed ? 'text-destructive' : 'text-muted-foreground',
+              )}
+            >
+              {pending.failed ? 'No enviada' : 'Enviando…'}
+            </p>
+          </li>
+        )}
+      </ol>
       <div ref={endRef} />
-    </ol>
+    </>
   )
 }
 

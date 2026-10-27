@@ -68,7 +68,3 @@ export function rankSpanishVoices(voices: SpeechSynthesisVoice[]): SpeechSynthes
         a.name.localeCompare(b.name),
     )
 }
-
-export function pickSpanishVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
-  return rankSpanishVoices(voices)[0]
-}

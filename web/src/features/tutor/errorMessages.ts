@@ -60,7 +60,13 @@ export function requestError(error: unknown, step: 'send' | 'transcribe'): Tutor
     case 'unauthorized':
       return { ...base, message: 'Tu sesión expiró. Vuelve a iniciar sesión.' }
     case 'forbidden':
-      return { ...base, message: 'No tienes acceso a esta lección.' }
+      return {
+        ...base,
+        message:
+          error.code === 'csrf_validation_failed'
+            ? 'La solicitud fue rechazada por seguridad. Recarga la página e inténtalo de nuevo.'
+            : 'No tienes acceso a esta lección.',
+      }
     case 'validation':
       return {
         ...base,

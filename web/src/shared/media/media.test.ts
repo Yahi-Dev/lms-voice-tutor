@@ -1,5 +1,5 @@
 import { MicrophoneError, pickAudioMimeType, toMicrophoneError } from './recording'
-import { pickSpanishVoice, rankSpanishVoices, splitIntoSpeechChunks, voiceQuality } from './speech'
+import { rankSpanishVoices, splitIntoSpeechChunks, voiceQuality } from './speech'
 
 describe('pickAudioMimeType', () => {
   it('prefers WebM with Opus and falls back to MP4 for older Safari', () => {
@@ -66,10 +66,5 @@ describe('rankSpanishVoices', () => {
     expect(voiceQuality(salome)).toBe('natural')
     expect(voiceQuality(google)).toBe('good')
     expect(voiceQuality(helena)).toBe('basic')
-  })
-
-  it('picks the best Spanish voice or nothing', () => {
-    expect(pickSpanishVoice([helena, salome])).toBe(salome)
-    expect(pickSpanishVoice([english])).toBeUndefined()
   })
 })
