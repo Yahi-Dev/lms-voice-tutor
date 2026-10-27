@@ -37,7 +37,7 @@ internal sealed partial class FakeTutorModel(IOptions<TutorOptions> options, Tim
         ThrowIfSimulatingFailure(settings.FakeFailure);
 
         var questionTerms = Terms(request.Question);
-        var topics = string.Join(", ", request.Lesson.Sections.Take(3).Select(s => s.Title));
+        var topics = DescribeTopics(request.Lesson);
 
         if (questionTerms.Count > 0 && questionTerms.All(Greetings.Contains))
         {
@@ -51,11 +51,18 @@ internal sealed partial class FakeTutorModel(IOptions<TutorOptions> options, Tim
 
         if (best.Score < MinimumScore)
         {
-            return Insufficient($"Esta lección no cubre esa pregunta. Puedes preguntarme sobre temas como {topics}.");
+            return Insufficient($"Esta lección no cubre esa pregunta. Puedes preguntarme, por ejemplo, sobre {topics}.");
         }
 
         var excerpt = string.Join(' ', SentenceSplitter().Split(best.Section.Body).Take(2)).Trim();
         return new TutorModelReply(TutorReplyStatus.Answered, $"Según la sección «{best.Section.Title}»: {excerpt}", [best.Section.Key], ModelName);
+    }
+
+    // "«GET: leer recursos», «POST: crear recursos» o «PUT y PATCH: actualizar recursos»", skipping the introduction.
+    private static string DescribeTopics(LessonContext lesson)
+    {
+        var titles = lesson.Sections.Skip(lesson.Sections.Count > 3 ? 1 : 0).Take(3).Select(s => $"«{s.Title}»").ToList();
+        return titles.Count <= 1 ? string.Concat(titles) : $"{string.Join(", ", titles[..^1])} o {titles[^1]}";
     }
 
     private static TutorModelReply Insufficient(string answer) =>
