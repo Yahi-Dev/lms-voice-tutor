@@ -217,6 +217,40 @@ public sealed class TutorTests(TutorApiFactory factory) : IClassFixture<TutorApi
     }
 
     [Fact]
+    public async Task Ask_WhenTheProviderKeepsReturningInvalidJson_DegradesInsteadOfFailing()
+    {
+        var stub = new StubTutorModel(_ =>
+            throw new ExternalServiceException("tutor", ExternalServiceFailure.InvalidResponse, "json_validate_failed"));
+        var app = factory.WithServices(services => services.AddScoped<ITutorModel>(_ => stub));
+        var lessonId = await factory.GetLessonIdAsync("metodos-http");
+        var client = ApiClient.Create(app);
+        await client.LoginAsync(DemoData.Ana);
+
+        var exchange = await client.AskSuccessfullyAsync(lessonId, "¿Para qué sirve POST?");
+
+        Assert.Equal("insufficient_information", exchange.Status);
+        Assert.Equal(TutorService.UnreliableAnswerFallback, exchange.Answer);
+        Assert.Equal(2, stub.Calls);
+    }
+
+    [Fact]
+    public async Task Ask_WhenTheProviderIsMisconfigured_IsNotOfferedAsRetryable()
+    {
+        var app = factory.WithServices(services => services.AddScoped<ITutorModel>(_ => new StubTutorModel(_ =>
+            throw new ExternalServiceException("tutor", ExternalServiceFailure.Misconfigured, "invalid api key"))));
+        var lessonId = await factory.GetLessonIdAsync("metodos-http");
+        var client = ApiClient.Create(app);
+        await client.LoginAsync(DemoData.Ana);
+
+        var response = await client.AskAsync(lessonId, "¿Para qué sirve POST?");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Null(response.Headers.RetryAfter);
+        using var problem = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(_ct));
+        Assert.False(problem.RootElement.GetProperty("retryable").GetBoolean());
+    }
+
+    [Fact]
     public async Task SystemStatus_WithoutProviderKey_ReportsDemoMode()
     {
         var client = factory.CreateApiClient();
