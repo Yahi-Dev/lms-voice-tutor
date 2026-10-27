@@ -36,6 +36,8 @@ export function useVoiceRecorder({
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<number | undefined>(undefined)
   const cancelledRef = useRef(false)
+  // Set while the permission prompt is open, so a second click cannot open a second microphone stream.
+  const startingRef = useRef(false)
   const callbacksRef = useRef({ onStarted, onRecorded, onError })
 
   useEffect(() => {
@@ -61,13 +63,14 @@ export function useVoiceRecorder({
   }, [stop])
 
   const start = useCallback(async () => {
-    if (recorderRef.current) return
+    if (recorderRef.current || startingRef.current) return
     if (!isRecordingSupported()) {
       callbacksRef.current.onError(new MicrophoneError('unsupported'))
       return
     }
 
     let stream: MediaStream
+    startingRef.current = true
     try {
       stream = await navigator.mediaDevices.getUserMedia(AUDIO_CONSTRAINTS)
     } catch (error) {
@@ -82,6 +85,8 @@ export function useVoiceRecorder({
         callbacksRef.current.onError(toMicrophoneError(error))
         return
       }
+    } finally {
+      startingRef.current = false
     }
 
     const mimeType = pickAudioMimeType()
