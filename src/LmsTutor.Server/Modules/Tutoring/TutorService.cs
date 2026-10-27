@@ -113,7 +113,7 @@ internal sealed partial class TutorService(
             {
                 reply = await model.CompleteAsync(request, cancellationToken);
             }
-            catch (ExternalServiceException exception) when (exception.Failure == ExternalServiceFailure.InvalidResponse && attempt == 1)
+            catch (ExternalServiceException exception) when (exception.Failure == ExternalServiceFailure.InvalidResponse)
             {
                 LogUnusableReply(logger, attempt, exception.Message);
                 continue;
@@ -164,7 +164,7 @@ internal sealed partial class TutorService(
             .Where(e => e.UserId == userId && e.LessonId == lessonId && e.Status == TutorReplyStatus.Answered)
             .OrderByDescending(e => e.CreatedAt)
             .Take(turns)
-            .Select(e => new ChatTurn(e.Question, e.Answer))
+            .Select(e => new ChatTurn(e.Question, e.Answer, e.CitedSectionKeys))
             .ToListAsync(cancellationToken);
 
         recent.Reverse();

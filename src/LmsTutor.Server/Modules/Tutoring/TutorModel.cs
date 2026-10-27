@@ -5,7 +5,7 @@ public sealed record LessonSectionContent(string Key, string Title, string Body)
 /// <summary>The only material the tutor may use: the lesson the student is authorized to read.</summary>
 public sealed record LessonContext(Guid Id, string Slug, string Title, IReadOnlyList<LessonSectionContent> Sections);
 
-public sealed record ChatTurn(string Question, string Answer);
+public sealed record ChatTurn(string Question, string Answer, IReadOnlyList<string> CitedSectionIds);
 
 public sealed record TutorRequest(LessonContext Lesson, IReadOnlyList<ChatTurn> History, string Question);
 

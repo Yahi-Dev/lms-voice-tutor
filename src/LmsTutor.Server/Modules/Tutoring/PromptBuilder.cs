@@ -1,5 +1,8 @@
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Unicode;
 
 namespace LmsTutor.Server.Modules.Tutoring;
 
@@ -41,10 +44,12 @@ internal static class PromptBuilder
             new("system", BuildSystemMessage(request.Lesson)),
         };
 
+        // Previous answers are replayed in the same JSON shape the model must produce: plain-text assistant
+        // turns lead the model to answer in plain text and break the structured output.
         foreach (var turn in request.History)
         {
             messages.Add(new PromptMessage("user", WrapQuestion(turn.Question)));
-            messages.Add(new PromptMessage("assistant", turn.Answer));
+            messages.Add(new PromptMessage("assistant", FormatPreviousReply(turn)));
         }
 
         messages.Add(new PromptMessage("user", WrapQuestion(request.Question)));
@@ -95,6 +100,12 @@ internal static class PromptBuilder
             ["additionalProperties"] = false,
         };
     }
+
+    internal static string FormatPreviousReply(ChatTurn turn) =>
+        JsonSerializer.Serialize(new { citedSectionIds = turn.CitedSectionIds, status = "answered", answer = turn.Answer }, ReplayJson);
+
+    // Keeps accented letters readable for the model instead of escape sequences.
+    private static readonly JsonSerializerOptions ReplayJson = new() { Encoder = JavaScriptEncoder.Create(UnicodeRanges.All) };
 
     // Student text keeps its meaning but cannot break out of its tag.
     private static string WrapQuestion(string question) =>
