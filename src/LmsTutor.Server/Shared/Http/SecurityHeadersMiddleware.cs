@@ -7,7 +7,7 @@ namespace LmsTutor.Server.Shared.Http;
 public sealed class SecurityHeadersMiddleware(RequestDelegate next)
 {
     internal const string ContentSecurityPolicy =
-        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; " +
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; " +
         "media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
     public Task InvokeAsync(HttpContext context)

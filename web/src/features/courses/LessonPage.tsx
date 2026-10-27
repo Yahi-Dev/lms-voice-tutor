@@ -44,7 +44,7 @@ export function LessonPage() {
   }
 
   if (lesson.isError) {
-    return <LessonError error={lesson.error} />
+    return <LessonError error={lesson.error} onRetry={() => void lesson.refetch()} />
   }
 
   return (
@@ -57,7 +57,7 @@ export function LessonPage() {
   )
 }
 
-function LessonError({ error }: { error: Error }) {
+function LessonError({ error, onRetry }: { error: Error; onRetry: () => void }) {
   const kind = error instanceof ApiError ? error.kind : 'unknown'
 
   const message =
@@ -84,9 +84,14 @@ function LessonError({ error }: { error: Error }) {
         </AlertTitle>
         <AlertDescription>{message.body}</AlertDescription>
       </Alert>
-      <Button asChild variant="outline">
-        <Link to="/">Volver a mis cursos</Link>
-      </Button>
+      <div className="flex gap-2">
+        {kind !== 'forbidden' && kind !== 'not_found' && (
+          <Button onClick={onRetry}>Reintentar</Button>
+        )}
+        <Button asChild variant="outline">
+          <Link to="/">Volver a mis cursos</Link>
+        </Button>
+      </div>
     </div>
   )
 }

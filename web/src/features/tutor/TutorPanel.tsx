@@ -66,6 +66,7 @@ export function TutorPanel({ lesson, onShowSection }: TutorPanelProps) {
           ) : (
             <MessageList
               exchanges={session.messages.data}
+              suggestedTopic={(lesson.sections[1] ?? lesson.sections[0])?.title}
               pending={pendingQuestion}
               speech={speech}
               onShowSection={onShowSection}

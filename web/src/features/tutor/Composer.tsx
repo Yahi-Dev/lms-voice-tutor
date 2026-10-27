@@ -4,9 +4,7 @@ import { formatElapsed } from '@/shared/lib/time'
 import { isRecordingSupported } from '@/shared/media/recording'
 import { Button } from '@/shared/ui/button'
 import { Textarea } from '@/shared/ui/textarea'
-import type { TutorState } from './tutorReducer'
-
-const MAX_QUESTION_LENGTH = 500
+import { MAX_QUESTION_LENGTH, type TutorState } from './tutorReducer'
 
 interface ComposerProps {
   state: TutorState
