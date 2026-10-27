@@ -30,7 +30,7 @@ Registro breve de las decisiones de diseño de la prueba de concepto: contexto, 
 
 ## 4. Sesión con cookie en el mismo origen
 
-**Decisión.** ASP.NET Core Identity con endpoints propios de `login`, `logout` y `me`. La cookie de sesión es `HttpOnly`, `SameSite=Strict` y `Secure` detrás de HTTPS. Hay bloqueo de cuenta tras intentos fallidos y el mismo mensaje para usuario inexistente, contraseña incorrecta o cuenta bloqueada. La SPA se sirve desde el mismo origen que la API.
+**Decisión.** ASP.NET Core Identity con endpoints propios de `login`, `logout` y `me`. La cookie de sesión es `HttpOnly` y `SameSite=Strict`; `Secure` es configurable (`Auth:CookieSecurePolicy`) para que la demo funcione en `http://localhost` y se exija en producción. Hay bloqueo de cuenta tras intentos fallidos y el mismo mensaje, y un tiempo de respuesta similar, para usuario inexistente, contraseña incorrecta o cuenta bloqueada. La SPA se sirve desde el mismo origen que la API.
 
 **Alternativas.** JWT en `localStorage` (expuesto ante XSS) o `MapIdentityApi`, que agrega registro abierto y endpoints que la POC no necesita.
 
@@ -49,6 +49,8 @@ Registro breve de las decisiones de diseño de la prueba de concepto: contexto, 
 **Alternativas.** RAG con embeddings y base vectorial. Con dos lecciones cortas, recuperar fragmentos solo añade puntos de fallo; además, darle al modelo la lección entera da respuestas más fieles y fáciles de probar.
 
 **Consecuencias.** El "no tengo información suficiente" es un campo, no una frase que haya que adivinar. Cuando el contenido crezca (un curso entero, transcripciones de video, PDF), `LessonSection` ya es la unidad que se indexaría (SQLite FTS5 o pgvector) sin cambiar el contrato de salida ni la interfaz. La parte fija del prompt es idéntica entre preguntas para aprovechar la caché de prefijos del proveedor.
+
+Una lección aprendida al probar con el modelo real: si las respuestas anteriores del historial se reenvían como texto plano, el modelo las imita y rompe la salida estructurada (3 de cada 4 preguntas de seguimiento fallaban con `json_validate_failed`). Se reenvían en el mismo JSON del esquema, con sus citas, y con eso el fallo desapareció. Las pruebas automáticas usan un modelo simulado, por eso este tipo de problema solo aparece con una prueba de humo contra el proveedor real.
 
 ## 7. Groq como proveedor, detrás de puertos propios
 
@@ -75,7 +77,7 @@ La calidad final depende de las voces del navegador. Si no hay voz en español, 
 
 ## 9. Errores y resiliencia pensados para la interfaz
 
-**Decisión.** Todos los errores son Problem Details (RFC 9457) con un `code` estable y un indicador `retryable`. Los fallos del proveedor se traducen así: límite de cuota → `429` con `Retry-After`; caída → `503`; demora → `504`. Las llamadas salientes pasan por el pipeline de resiliencia de .NET con un solo reintento ante fallos transitorios, nunca ante `429`, porque la cuota gratuita es compartida y reintentar la agota. Hay límite de peticiones por alumno (respuesta `429`, no el `503` por defecto). Cada pregunta lleva un id generado en el cliente que se reutiliza en los reintentos, así que repetir nunca duplica un mensaje.
+**Decisión.** Los errores son Problem Details (RFC 9457). Los de negocio y proveedores llevan un `code` estable, y los de proveedores y límites de uso indican además si conviene reintentar (`retryable`); una llave inválida o un modelo inexistente no se ofrecen como reintentables. Los fallos del proveedor se traducen así: límite de cuota → `429` con `Retry-After`; caída → `503`; demora → `504`. Las llamadas salientes pasan por el pipeline de resiliencia de .NET con un solo reintento ante fallos transitorios, nunca ante `429`, porque la cuota gratuita es compartida y reintentar la agota. Hay límite de peticiones por alumno (respuesta `429`, no el `503` por defecto). Cada pregunta lleva un id generado en el cliente que se reutiliza al reenviar el mismo texto, así que repetir nunca duplica un mensaje; si el alumno edita la pregunta, se envía como una pregunta nueva.
 
 **Consecuencias.** La SPA modela la interacción como una máquina de estados con el borrador fuera de cada estado. Ningún fallo (micrófono, red, servicio) borra lo que el alumno escribió o dictó, y siempre hay un mensaje claro con su acción.
 

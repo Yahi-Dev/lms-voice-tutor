@@ -24,7 +24,7 @@ Prueba de concepto: un alumno abre una lección, pregunta por texto o por voz y 
 Requisitos: Docker Desktop.
 
 ```bash
-cp .env.example .env        # opcional: pega tu llave de Groq en Tutoring__ApiKey
+cp .env.example .env        # pega tu llave de Groq en Tutoring__ApiKey (sin ella arranca en modo demo)
 docker compose up --build
 ```
 
@@ -52,6 +52,8 @@ dotnet user-secrets set "Tutoring:ApiKey" "gsk_..." --project src/LmsTutor.Serve
 
 ## Modo demo y proveedor real
 
+> Para evaluar el tutor con un modelo de lenguaje y la transcripción reales hace falta una llave **gratuita** de Groq; se crea en un par de minutos y no pide tarjeta. Sin llave la aplicación funciona de punta a punta con proveedores simulados, útil para revisar el flujo, la interfaz y los controles de acceso.
+
 | | Sin llave (modo demo) | Con llave de Groq (gratuita, sin tarjeta) |
 |---|---|---|
 | Tutor | Modelo de demostración que responde citando la sección con más coincidencias, o informa que la lección no cubre la pregunta | `openai/gpt-oss-120b` con salida estructurada; `openai/gpt-oss-20b` como respaldo si el primero está limitado |
@@ -78,7 +80,7 @@ Son datos de evaluación locales, no secretos. La pantalla de inicio de sesión 
 | 3 | Tutor contextual | En *Métodos HTTP* pregunta «¿Para qué sirve POST?» y luego «¿Cómo despliego en Kubernetes?» | Respuesta con la fuente *POST: crear recursos*; después, *La lección no cubre esta pregunta* | `TutorTests`, e2e |
 | 4 | Voz | Pulsa *Grabar pregunta*, habla, *Detener grabación*; revisa el texto y *Enviar*; pulsa *Escuchar* | La transcripción aparece editable; la respuesta se lee en voz alta | `TutorPanel.test.tsx`, e2e |
 | 5 | Historial | Recarga la página o cierra sesión y vuelve a entrar | La conversación sigue ahí | `TutorTests`, e2e |
-| 6 | Recuperación | Bloquea el micrófono del sitio; activa *Offline* en DevTools; o ejecuta con `Tutoring__FakeFailure=Unavailable` | Mensaje claro, la pregunta se conserva y aparece *Reintentar* | `TutorPanel.test.tsx`, `TutorTests`, e2e |
+| 6 | Recuperación | a) Bloquea el micrófono del sitio y pulsa *Grabar pregunta*. b) Activa *Offline* en DevTools. c) En modo demo, agrega `Tutoring__FakeFailure=Unavailable` al `.env` y reinicia | a) Explica cómo activarlo y deja seguir por texto. b) Aviso *Sin conexión*, la pregunta se conserva y se envía al volver la red. c) *El tutor no está disponible*, la pregunta se conserva y aparece *Reintentar* | `TutorPanel.test.tsx`, `TutorTests`, e2e |
 
 Controles de seguridad:
 
@@ -86,18 +88,22 @@ Controles de seguridad:
 |---|---|---|
 | IDOR / acceso | Con la sesión de Bruno: `GET /api/lessons/{id}/messages` de una lección de Ana | `403`; ningún endpoint acepta un id de usuario |
 | XSS | Pregunta `<img src=x onerror=alert(1)>` | Se muestra como texto, no se ejecuta |
-| Inyección SQL | Inicia sesión con `' OR 1=1--` | `401`: EF Core solo usa consultas parametrizadas |
+| Inyección SQL | Inicia sesión con un correo válido y la contraseña `' OR 1=1--` | `401`: EF Core solo usa consultas parametrizadas (en el campo de correo responde `400` por validación) |
 | CSRF | `POST` a la API sin la cabecera `X-CSRF` | `403` |
 | Abuso | Más de 10 preguntas en un minuto | `429` con `Retry-After` |
-| Secretos | `git log -p \| grep gsk_` | Sin resultados; el CI ejecuta gitleaks sobre todo el historial |
+| Secretos | `git log -p \| grep -E "gsk_[A-Za-z0-9]{20,}"` | Sin resultados; el CI ejecuta gitleaks sobre todo el historial |
 
 ## Pruebas y CI
 
 ```bash
-dotnet test --solution LmsTutor.slnx        # 111 pruebas: unitarias e integración (API real + SQLite)
+dotnet test --solution LmsTutor.slnx        # 115 pruebas: unitarias e integración (API real + SQLite)
 cd web
-npm test                                     # 36 pruebas de componentes y lógica (Vitest)
-npm run build && npm run test:e2e            # 5 pruebas end-to-end en Chromium con micrófono simulado
+npm test                                     # 47 pruebas de componentes y lógica (Vitest)
+
+# End-to-end: 5 pruebas en Chromium con micrófono simulado contra el build de producción.
+# Requieren el .NET SDK (arrancan el backend en el puerto 5090) y descargar Chromium una vez.
+npx playwright install chromium
+npm run build && npm run test:e2e
 ```
 
 GitHub Actions ejecuta en cada PR: formato, compilación con warnings como errores, pruebas, auditoría de dependencias, lint y tipos del frontend, pruebas end-to-end, construcción y prueba de humo de la imagen Docker, y escaneo de secretos.
@@ -150,6 +156,7 @@ Las decisiones, alternativas y límites están en **[docs/DECISIONS.md](docs/DEC
 - **El micrófono no funciona:** usa `http://localhost`, no una IP de red; revisa el permiso en el icono junto a la dirección del sitio.
 - **La voz suena robótica:** abre la aplicación en **Microsoft Edge**, que trae voces neuronales en español (por ejemplo *Salome* o *Gonzalo* de Colombia, *Dalia* o *Jorge* de México). La aplicación elige la más natural disponible y puedes cambiarla en *Voz de lectura*. Chrome ofrece las voces *Google español*.
 - **"Escuchar" está desactivado:** el navegador no tiene ninguna voz en español. En Linux puede faltar.
-- **`429` del tutor con Groq:** el plan gratuito permite unas pocas preguntas por minuto para toda la cuenta. Espera los segundos indicados o usa el modo demo.
+- **`429` del tutor con Groq:** el plan gratuito permite unas pocas preguntas por minuto para toda la cuenta (cada pregunta usa unos 1.300 tokens). Espera los segundos indicados o usa el modo demo.
+- **Ana o Bruno no pueden entrar:** tras 5 contraseñas incorrectas la cuenta se bloquea 2 minutos (y responde igual que una contraseña incorrecta). Espera o reinicia la aplicación, que desbloquea las cuentas de prueba al arrancar.
 - **Puerto ocupado:** cambia `APP_PORT` en `.env`.
 - **Empezar de cero:** `docker compose down -v` borra la base de datos y las sesiones.
