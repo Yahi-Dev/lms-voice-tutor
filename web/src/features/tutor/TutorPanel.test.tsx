@@ -88,6 +88,33 @@ describe('TutorPanel', () => {
     expect(clientIds[0]).toBe(clientIds[1])
   })
 
+  it('sends the edited question with a new id when the student changes it after a failure', async () => {
+    const sent: { question: string; clientMessageId: string }[] = []
+    server.use(
+      http.post(apiUrl('/lessons/:lessonId/messages'), async ({ request }) => {
+        const body = (await request.json()) as { question: string; clientMessageId: string }
+        sent.push(body)
+        return sent.length === 1
+          ? problem(503, 'tutor_unavailable')
+          : HttpResponse.json(exchange({ question: body.question }))
+      }),
+    )
+    const user = userEvent.setup()
+    renderPanel()
+
+    await user.type(questionBox(), '¿Qué es POST?')
+    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+    const alert = await screen.findByRole('alert')
+
+    await user.clear(questionBox())
+    await user.type(questionBox(), '¿Qué es PUT?')
+    await user.click(within(alert).getByRole('button', { name: 'Reintentar' }))
+
+    expect(await screen.findByText('¿Qué es PUT?')).toBeInTheDocument()
+    expect(sent.map((body) => body.question)).toEqual(['¿Qué es POST?', '¿Qué es PUT?'])
+    expect(sent[0].clientMessageId).not.toBe(sent[1].clientMessageId)
+  })
+
   it('renders markup in an answer as plain text', async () => {
     server.use(
       http.get(apiUrl('/lessons/:lessonId/messages'), () =>

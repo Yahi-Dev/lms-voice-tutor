@@ -1,5 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { sessionQueryKey } from '@/features/auth/api'
+import { ApiError } from '@/shared/api/client'
 import type { TutorExchange } from '@/shared/api/types'
 import { newId } from '@/shared/lib/ids'
 import { askTutor, fetchMessages, messagesQueryKey, transcribeAudio } from './api'
@@ -20,6 +22,16 @@ export function useTutorSession(lessonId: string) {
     queryFn: ({ signal }) => fetchMessages(lessonId, signal),
   })
 
+  // A session that expired mid-question sends the student back to the login screen.
+  const expireSessionIfUnauthorized = useCallback(
+    (error: unknown) => {
+      if (error instanceof ApiError && error.kind === 'unauthorized') {
+        queryClient.setQueryData(sessionQueryKey, null)
+      }
+    },
+    [queryClient],
+  )
+
   const beginRequest = () => {
     requestRef.current?.abort()
     const controller = new AbortController()
@@ -38,10 +50,11 @@ export function useTutorSession(lessonId: string) {
         dispatch({ type: 'TRANSCRIBED', text })
       } catch (error) {
         if (controller.signal.aborted) return
+        expireSessionIfUnauthorized(error)
         dispatch({ type: 'TRANSCRIPTION_FAILED', error: requestError(error, 'transcribe') })
       }
     },
-    [lessonId],
+    [expireSessionIfUnauthorized, lessonId],
   )
 
   const recorder = useVoiceRecorder({
@@ -66,26 +79,38 @@ export function useTutorSession(lessonId: string) {
         dispatch({ type: 'ANSWERED' })
       } catch (error) {
         if (controller.signal.aborted) return
+        expireSessionIfUnauthorized(error)
         dispatch({ type: 'SEND_FAILED', error: requestError(error, 'send') })
       }
     },
-    [lessonId, queryClient],
+    [expireSessionIfUnauthorized, lessonId, queryClient],
   )
 
   const submit = useCallback(() => {
     const text = state.draft.trim()
     if (text.length < MIN_QUESTION_LENGTH) return
-    // The id is created once per question and reused by every retry, so the server never duplicates it.
-    void send({ clientMessageId: newId(), text, inputMode: state.inputMode })
-  }, [send, state.draft, state.inputMode])
+    // Sending the same text again after a failure reuses its id, so the server never stores it twice
+    // (the first attempt may have reached it). An edited question is a new question with a new id.
+    const { phase } = state
+    const failed =
+      phase.name === 'error' && phase.pending?.text === text ? phase.pending : undefined
+    void send({
+      clientMessageId: failed?.clientMessageId ?? newId(),
+      text,
+      inputMode: state.inputMode,
+    })
+  }, [send, state])
 
   const retry = useCallback(() => {
     const { phase } = state
     if (phase.name !== 'error') return
-    if (phase.failed === 'send' && phase.pending) void send(phase.pending)
-    else if (phase.failed === 'transcribe' && phase.audio) void transcribe(phase.audio)
+    // Retrying sends what the box shows now, so edits made after the failure are not lost.
+    if (phase.failed === 'send') {
+      if (state.draft.trim().length >= MIN_QUESTION_LENGTH) submit()
+      else if (phase.pending) void send(phase.pending)
+    } else if (phase.failed === 'transcribe' && phase.audio) void transcribe(phase.audio)
     else dispatch({ type: 'ERROR_DISMISSED' })
-  }, [send, state, transcribe])
+  }, [send, state, submit, transcribe])
 
   const setDraft = useCallback((text: string) => dispatch({ type: 'DRAFT_CHANGED', text }), [])
   const dismissError = useCallback(() => dispatch({ type: 'ERROR_DISMISSED' }), [])

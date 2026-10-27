@@ -52,6 +52,9 @@ export type TutorEvent =
   | { type: 'SEND_FAILED'; error: TutorError }
   | { type: 'ERROR_DISMISSED' }
 
+/** Same limit as the server; a long dictation is cut so it can still be sent. */
+export const MAX_QUESTION_LENGTH = 500
+
 export const initialTutorState: TutorState = {
   phase: { name: 'idle' },
   draft: '',
@@ -88,7 +91,8 @@ export function tutorReducer(state: TutorState, event: TutorEvent): TutorState {
 
     case 'TRANSCRIBED': {
       if (phase.name !== 'transcribing') return state
-      const draft = state.draft.trim() ? `${state.draft.trim()} ${event.text}` : event.text
+      const combined = state.draft.trim() ? `${state.draft.trim()} ${event.text}` : event.text
+      const draft = combined.slice(0, MAX_QUESTION_LENGTH)
       return { phase: { name: 'idle' }, draft, inputMode: 'voice', transcriptReady: true }
     }
 
