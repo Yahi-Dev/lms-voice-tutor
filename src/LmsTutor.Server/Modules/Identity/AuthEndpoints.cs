@@ -19,6 +19,8 @@ public sealed record CurrentUserResponse(Guid Id, string Email, string DisplayNa
 
 public static class AuthEndpoints
 {
+    private static readonly Lazy<string> DummyPasswordHash = new(() => new PasswordHasher<AppUser>().HashPassword(new AppUser(), Guid.NewGuid().ToString()));
+
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder api)
     {
         var auth = api.MapGroup("/auth").WithTags("Auth");
@@ -38,6 +40,8 @@ public static class AuthEndpoints
         var user = await userManager.FindByEmailAsync(request.Email);
         if (user is null)
         {
+            // Hash anyway so an unknown email takes as long as a wrong password and cannot be detected by timing.
+            userManager.PasswordHasher.VerifyHashedPassword(new AppUser(), DummyPasswordHash.Value, request.Password);
             return InvalidCredentials();
         }
 

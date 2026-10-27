@@ -22,7 +22,7 @@ public sealed class PromptBuilderTests
     public void Build_KeepsTheSystemMessageIdenticalAcrossQuestions()
     {
         var first = PromptBuilder.Build(new TutorRequest(TestLessons.HttpMethods, [], "¿Qué es GET?"));
-        var second = PromptBuilder.Build(new TutorRequest(TestLessons.HttpMethods, [new ChatTurn("Hola", "Hola")], "¿Qué es DELETE?"));
+        var second = PromptBuilder.Build(new TutorRequest(TestLessons.HttpMethods, [new ChatTurn("Hola", "Hola", [])], "¿Qué es DELETE?"));
 
         Assert.Equal(first[0].Content, second[0].Content);
     }
@@ -30,13 +30,27 @@ public sealed class PromptBuilderTests
     [Fact]
     public void Build_ReplaysHistoryInOrderBeforeTheNewQuestion()
     {
-        var history = new List<ChatTurn> { new("¿Qué es GET?", "Lee recursos."), new("¿Y POST?", "Crea recursos.") };
+        var history = new List<ChatTurn> { new("¿Qué es GET?", "Lee recursos.", ["get"]), new("¿Y POST?", "Crea recursos.", ["post"]) };
 
         var messages = PromptBuilder.Build(new TutorRequest(TestLessons.HttpMethods, history, "¿Y DELETE?"));
 
         Assert.Equal(["system", "user", "assistant", "user", "assistant", "user"], messages.Select(m => m.Role));
-        Assert.Equal("Crea recursos.", messages[4].Content);
         Assert.Equal("<pregunta_estudiante>¿Y DELETE?</pregunta_estudiante>", messages[^1].Content);
+    }
+
+    [Fact]
+    public void Build_ReplaysPreviousAnswersInTheStructuredReplyFormat()
+    {
+        // Plain-text assistant turns made the real model drop the JSON format; previous answers use the schema too.
+        var history = new List<ChatTurn> { new("¿Y POST?", "Crea recursos con acentuación.", ["post"]) };
+
+        var messages = PromptBuilder.Build(new TutorRequest(TestLessons.HttpMethods, history, "¿Y DELETE?"));
+
+        using var reply = System.Text.Json.JsonDocument.Parse(messages[2].Content);
+        Assert.Equal("answered", reply.RootElement.GetProperty("status").GetString());
+        Assert.Equal("Crea recursos con acentuación.", reply.RootElement.GetProperty("answer").GetString());
+        Assert.Equal("post", reply.RootElement.GetProperty("citedSectionIds")[0].GetString());
+        Assert.Contains("acentuación", messages[2].Content, StringComparison.Ordinal);
     }
 
     [Fact]

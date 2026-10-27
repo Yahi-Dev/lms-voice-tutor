@@ -36,7 +36,8 @@ internal sealed partial class ExternalServiceExceptionHandler(
                 "El servicio no está disponible en este momento."),
         };
 
-        var retryable = failure.Failure is not ExternalServiceFailure.InvalidInput;
+        // Rejected input and a misconfigured provider (bad key, unknown model) do not get better by retrying.
+        var retryable = failure.Failure is not (ExternalServiceFailure.InvalidInput or ExternalServiceFailure.Misconfigured);
         if (retryable)
         {
             var retryAfter = failure.RetryAfter ?? DefaultRetryAfter;
